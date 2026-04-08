@@ -45,7 +45,11 @@ export async function onRequest(context) {
 
   try {
     const resp = await fetch(target, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ImgProxy/1.0)' },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': targetUrl.origin + '/',
+        'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+      },
     });
     if (!resp.ok) {
       return new Response(`上游 ${resp.status}`, { status: resp.status, headers: cors });
