@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>题目 → PNG 转换器</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,"Microsoft YaHei",sans-serif;background:#1a1a2e;color:#e0e0e0;padding:20px}
+h1{text-align:center;font-size:20px;color:#fff;margin-bottom:4px}
+.sub{text-align:center;color:#888;font-size:12px;margin-bottom:16px}
+.uz{border:2px dashed #444;border-radius:12px;padding:30px;text-align:center;cursor:pointer;margin-bottom:12px}
+.uz:hover{border-color:#6c63ff}
+.uz input{display:none}
+.pn{background:#2a2a3e;border-radius:10px;padding:12px;margin-bottom:12px;display:none}
+.pn h3{font-size:13px;color:#6c63ff;margin-bottom:6px}
+.mr{display:flex;align-items:center;gap:6px;margin:3px 0}
+.mr label{width:70px;font-size:12px;color:#ccc;text-align:right}
+.mr select{flex:1;padding:3px 6px;border:1px solid #444;border-radius:5px;background:#1a1a2e;color:#fff;font-size:12px}
+.ptw{max-height:140px;overflow:auto;margin-top:6px;border-radius:5px}
+.pt{width:100%;border-collapse:collapse;font-size:10px}
+.pt th{background:#3a3a5e;color:#aaa;padding:3px 5px;position:sticky;top:0;text-align:left}
+.pt td{padding:2px 5px;border-bottom:1px solid #333;color:#ccc;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ct{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.ct label{font-size:12px;color:#aaa}
+.ct input[type=number]{width:50px;padding:2px 5px;border:1px solid #444;border-radius:5px;background:#2a2a3e;color:#fff}
+.ct select{padding:2px 5px;border:1px solid #444;border-radius:5px;background:#2a2a3e;color:#fff}
+button{padding:6px 16px;border:none;border-radius:7px;cursor:pointer;font-size:13px}
+.bp{background:#6c63ff;color:#fff}.bp:hover{background:#5a52d5}.bp:disabled{background:#444}
+.st{padding:8px;border-radius:7px;margin:6px 0;font-size:12px}
+.st.info{background:rgba(108,99,255,.15);color:#a8a3ff}
+.st.error{background:rgba(255,76,76,.15);color:#ff6b6b}
+.st.success{background:rgba(46,204,113,.15);color:#2ecc71}
+.pb{width:100%;height:5px;background:#333;border-radius:3px;margin:6px 0;overflow:hidden;display:none}
+.pb .fl{height:100%;background:linear-gradient(90deg,#6c63ff,#2ecc71);transition:width .3s}
+.ptx{font-size:11px;color:#888;margin:2px 0}
+.res{margin-top:12px}
+.ri{background:#2a2a3e;border-radius:8px;padding:10px;margin-bottom:10px}
+.ri h3{font-size:12px;margin-bottom:5px;color:#6c63ff}
+.rim{display:flex;gap:6px;flex-wrap:wrap}
+.rim .ib{flex:1;min-width:200px;text-align:center}
+.rim .ib img{max-width:100%;border-radius:5px;border:1px solid #444}
+.rim .ib .lb{font-size:10px;color:#888;margin:2px 0}
+.dbg{background:#1e1e30;border:1px solid #333;border-radius:6px;padding:6px;margin:4px 0;font-size:10px;color:#aaa;max-height:120px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+
+.render-area{position:absolute;left:-9999px;top:0}
+.rc{background:#fff;color:#333;font-family:"Microsoft YaHei","PingFang SC",sans-serif;font-size:16px;line-height:1.8}
+.rc .inn{padding:10px}
+.rc .qb{display:inline-block;background:#6c63ff;color:#fff;padding:2px 12px;border-radius:4px;font-size:14px;font-weight:bold;margin-bottom:8px}
+.rc img{max-width:100%;height:auto;display:block;margin:6px auto}
+.rc .oi{margin:4px 0;padding:4px 8px;background:#f5f5fa;border-radius:5px}
+.rc .at{display:inline-block;background:#6c63ff;color:#fff;padding:2px 12px;border-radius:4px;font-size:14px;margin-bottom:6px}
+.rc .av{font-size:16px;font-weight:bold;color:#6c63ff;margin-left:4px}
+.rc .as{margin-top:10px;padding-top:8px;border-top:1px dashed #ddd}
+.rc .tl{margin:8px 0 2px;font-weight:bold;color:#6c63ff;font-size:14px}
+.rc table{border-collapse:collapse;width:100%;margin:4px 0}
+.rc td,.rc th{border:1px solid #ddd;padding:4px 6px}
+.rc p{margin:3px 0}
+</style>
+</head>
+<body>
+<h1>📝 题目 → PNG</h1>
+<p class="sub">Excel/CSV · JSON解码 · 图片渲染 · ZIP</p>
+<div class="uz" onclick="document.getElementById('fi').click()">
+  <div style="font-size:32px;margin-bottom:4px">📂</div>
+  <p>点击选择或拖拽文件</p>
+  <input type="file" id="fi" multiple>
+</div>
+<div class="pn" id="mp">
+  <h3>🔗 字段映射</h3>
+  <div id="sSel" style="display:none;margin-bottom:6px"><label style="font-size:12px;color:#ccc">工作表：</label><select id="sDD" onchange="switchSheet()" style="padding:3px;border:1px solid #444;border-radius:5px;background:#1a1a2e;color:#fff;font-size:12px"></select></div>
+  <div class="mr"><label>题目ID：</label><select id="mId"></select></div>
+  <div class="mr"><label>题干：</label><select id="mStem"></select></div>
+  <div class="mr"><label>选项A：</label><select id="mA"></select></div>
+  <div class="mr"><label>选项B：</label><select id="mB"></select></div>
+  <div class="mr"><label>选项C：</label><select id="mC"></select></div>
+  <div class="mr"><label>选项D：</label><select id="mD"></select></div>
+  <div class="mr"><label>选项E：</label><select id="mE"></select></div>
+  <div class="mr"><label>答案：</label><select id="mAns"></select></div>
+  <div class="mr"><label>解析：</label><select id="mAna"></select></div>
+  <div class="mr"><label>题型：</label><select id="mType"></select></div>
+  <div class="ptw"><table class="pt" id="pvT"></table></div>
+</div>
+<div class="ct">
+  <label>扩边:<input type="number" id="padP" value="10" min="5" max="30">%</label>
+  <label>宽度:<input type="number" id="imgW" value="800" min="400" max="1600" step="100">px</label>
+  <label>清晰度:<select id="scV"><option value="2" selected>2x</option><option value="1">1x</option><option value="3">3x</option></select></label>
+  <label style="margin-left:8px"><input type="checkbox" id="upCk" checked> 上传到GitHub图床</label>
+  <button class="bp" id="cBtn" onclick="go()" disabled>🚀 开始转换</button>
+</div>
+<div id="ghCfg" style="background:#2a2a3e;border-radius:10px;padding:12px;margin-bottom:12px">
+  <h3 style="font-size:13px;color:#6c63ff;margin-bottom:8px">🐙 GitHub 图床配置 <span style="font-size:10px;color:#888;font-weight:normal">（保存在浏览器本地，不会上传）</span></h3>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+    <input id="ghOwner" placeholder="GitHub用户名" style="flex:1;min-width:100px;padding:4px 8px;border:1px solid #444;border-radius:5px;background:#1a1a2e;color:#fff;font-size:12px">
+    <input id="ghRepo" placeholder="仓库名 (如 question-images)" style="flex:1;min-width:140px;padding:4px 8px;border:1px solid #444;border-radius:5px;background:#1a1a2e;color:#fff;font-size:12px">
+    <input id="ghToken" type="password" placeholder="Personal Access Token" style="flex:2;min-width:200px;padding:4px 8px;border:1px solid #444;border-radius:5px;background:#1a1a2e;color:#fff;font-size:12px">
+    <button class="bp" onclick="saveGhCfg()" style="font-size:11px;padding:4px 10px">保存</button>
+    <button onclick="testGh()" style="font-size:11px;padding:4px 10px;background:#2ecc71;color:#fff;border:none;border-radius:5px;cursor:pointer">测试</button>
+  </div>
+  <div id="ghTip" style="font-size:10px;color:#888;margin-top:6px">
+    Token 获取: GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → 仅勾选该仓库的 Contents 读写权限
+  </div>
+</div>
+<div id="sB"></div>
+<div class="dbg" id="dbg" style="display:none"></div>
+<div class="pb" id="pb"><div class="fl" id="pf"></div></div>
+<div class="ptx" id="ptx"></div>
+<div id="urlBox" style="display:none;background:#2a2a3e;border-radius:10px;padding:12px;margin:10px 0">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <h3 style="font-size:13px;color:#6c63ff">🔗 图片链接</h3>
+    <div style="display:flex;gap:6px">
+      <button class="bp" onclick="exportExcel()" style="font-size:11px;padding:4px 10px;background:#2ecc71">📥 导出Excel</button>
+      <button class="bp" onclick="copyUrls('all')" style="font-size:11px;padding:4px 10px">复制全部</button>
+      <button class="bp" onclick="copyUrls('json')" style="font-size:11px;padding:4px 10px;background:#5a52d5">JSON</button>
+    </div>
+  </div>
+  <div id="urlList" style="max-height:300px;overflow:auto;font-size:11px;font-family:monospace"></div>
+</div>
+<div class="res" id="res"></div>
+<div class="render-area" id="ra"></div>
+
+<script>
+// 同域代理 (Cloudflare Pages Functions 自动处理)
+const PROXY_BASE = '';
+
+let rows=[],hdrs=[],wb=null,imgCache={},uploadedUrls=[];
+
+// ================================================================
+//  GitHub 图床配置
+// ================================================================
+function loadGhCfg(){
+  try{
+    const c=JSON.parse(localStorage.getItem('ghCfg')||'{}');
+    if(c.owner)document.getElementById('ghOwner').value=c.owner;
+    if(c.repo)document.getElementById('ghRepo').value=c.repo;
+    if(c.token)document.getElementById('ghToken').value=c.token;
+  }catch(e){}
+}
+function saveGhCfg(){
+  const cfg={owner:document.getElementById('ghOwner').value.trim(),
+    repo:document.getElementById('ghRepo').value.trim(),
+    token:document.getElementById('ghToken').value.trim()};
+  localStorage.setItem('ghCfg',JSON.stringify(cfg));
+  document.getElementById('ghTip').innerHTML='<span style="color:#2ecc71">✅ 已保存到浏览器本地</span>';
+}
+function getGhCfg(){
+  const o=document.getElementById('ghOwner').value.trim();
+  const r=document.getElementById('ghRepo').value.trim();
+  const t=document.getElementById('ghToken').value.trim();
+  if(!o||!r||!t)return null;
+  return {owner:o,repo:r,token:t};
+}
+async function testGh(){
+  const cfg=getGhCfg();
+  const tip=document.getElementById('ghTip');
+  if(!cfg){tip.innerHTML='<span style="color:#ff6b6b">请填写完整配置</span>';return;}
+  tip.innerHTML='<span style="color:#a8a3ff">测试中...</span>';
+  try{
+    const r=await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}`,{
+      headers:{'Authorization':`token ${cfg.token}`,'Accept':'application/vnd.github.v3+json'}
+    });
+    if(r.ok){
+      const d=await r.json();
+      tip.innerHTML=`<span style="color:#2ecc71">✅ 仓库 ${d.full_name} 连接成功${d.private?' (私有)':' (公开)'}</span>`;
+      saveGhCfg();
+    }else{
+      const d=await r.json().catch(()=>({}));
+      tip.innerHTML=`<span style="color:#ff6b6b">❌ ${r.status} - ${d.message||'请检查用户名/仓库名/Token'}</span>`;
+    }
+  }catch(e){
+    tip.innerHTML=`<span style="color:#ff6b6b">❌ 网络错误: ${e.message}</span>`;
+  }
+}
+loadGhCfg();
+document.querySelector('.uz').addEventListener('dragover',e=>e.preventDefault());
+document.querySelector('.uz').addEventListener('drop',e=>{e.preventDefault();hf(e.dataTransfer.files);});
+document.getElementById('fi').addEventListener('change',e=>hf(e.target.files));
+function showS(t,m){document.getElementById('sB').innerHTML=`<div class="st ${t}">${m}</div>`;}
+function dbg(m){const d=document.getElementById('dbg');d.style.display='block';d.textContent=m;}
+function sp(p){document.getElementById('pb').style.display='block';document.getElementById('pf').style.width=p+'%';}
+function ptx(m){document.getElementById('ptx').textContent=m;}
+
+// ================================================================
+//  图片URL -> base64
+//  策略: CF Worker代理 / 本地代理 / 直接fetch → blob → base64
+// ================================================================
+function blobToB64(blob){
+  return new Promise((res,rej)=>{
+    const fr=new FileReader();
+    fr.onloadend=()=>res(fr.result);
+    fr.onerror=rej;
+    fr.readAsDataURL(blob);
+  });
+}
+
+async function imgToB64(url){
+  if(!url||!url.startsWith('http'))return url;
+  if(imgCache[url])return imgCache[url];
+
+  const attempts=[];
+  // 1. 同域代理 (Pages Functions 或本地 serve.py)
+  attempts.push(()=>fetch('/proxy?url='+encodeURIComponent(url)));
+  // 2. 直接 fetch (同源时可行)
+  attempts.push(()=>fetch(url));
+
+  for(const attempt of attempts){
+    try{
+      const r=await Promise.race([
+        attempt(),
+        new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),15000))
+      ]);
+      if(!r.ok)continue;
+      const ct=r.headers.get('content-type')||'';
+      if(ct.includes('text/html'))continue;
+      const blob=await r.blob();
+      if(blob.size<100)continue;
+      const b64=await blobToB64(blob);
+      imgCache[url]=b64;
+      return b64;
+    }catch(e){continue;}
+  }
+
+  console.warn('图片获取失败:',url.substring(0,80));
+  imgCache[url]='__taint__';
+  return '__taint__';
+}
+
+async function preloadImgs(html){
+  const re=/<img[^>]+src\s*=\s*["']([^"']+)["']/gi;
+  const urls=new Set();let m;
+  while((m=re.exec(html))!==null)if(m[1].startsWith('http'))urls.add(m[1]);
+  if(!urls.size)return {html,tainted:false};
+  const arr=[...urls];
+  const b64s=await Promise.all(arr.map(u=>imgToB64(u)));
+  let out=html,tainted=false;
+  arr.forEach((url,i)=>{
+    if(b64s[i]==='__taint__'){tainted=true;}
+    else if(b64s[i]!==url){while(out.includes(url))out=out.replace(url,b64s[i]);}
+  });
+  return {html:out,tainted};
+}
+
+// ================================================================
+//  JSON解码
+// ================================================================
+function htmlDecode(s){
+  if(!s)return '';
+  s=String(s);
+  s=s.replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&lt;/g,'<')
+    .replace(/&gt;/g,'>').replace(/&#39;/g,"'").replace(/&nbsp;/g,' ');
+  s=s.replace(/&#(\d+);/g,(_,n)=>String.fromCharCode(n));
+  s=s.replace(/&#x([\da-fA-F]+);/g,(_,h)=>String.fromCharCode(parseInt(h,16)));
+  return s;
+}
+
+function parseTagDescArray(raw){
+  if(!raw)return null;
+  raw=String(raw).trim();
+  try{
+    const arr=JSON.parse(raw);
+    if(Array.isArray(arr)&&arr.length>0&&arr[0].tag!==undefined){
+      return arr.map(it=>({
+        tag:String(it.tag||''),
+        desc:htmlDecode(String(it.desc||it.html||it.content||it.text||''))
+      }));
+    }
+  }catch(e){}
+
+  let s=raw;
+  const si=s.indexOf('[');
+  const ei=s.lastIndexOf(']');
+  if(si>=0&&ei>si)s=s.substring(si+1,ei);
+
+  const items=[];
+  const parts=s.split('{"tag":"');
+
+  for(let p of parts){
+    p=p.trim();
+    if(!p)continue;
+    const tagEnd=p.indexOf('"');
+    if(tagEnd<0)continue;
+    const tag=p.substring(0,tagEnd);
+
+    const descMarker=',"desc":"';
+    const descStart=p.indexOf(descMarker);
+    if(descStart<0){items.push({tag,desc:''});continue;}
+
+    let desc=p.substring(descStart+descMarker.length);
+    const lastBrace=desc.lastIndexOf('}');
+    if(lastBrace>0){
+      let qPos=lastBrace-1;
+      while(qPos>=0&&desc[qPos]!='"')qPos--;
+      if(qPos>=0&&desc[qPos]==='"'){
+        const between=desc.substring(qPos+1,lastBrace).trim();
+        if(between==='')desc=desc.substring(0,qPos);
+      }
+    }
+    items.push({tag,desc:htmlDecode(desc)});
+  }
+  return items.length>0?items:null;
+}
+
+function deepDecode(str){
+  if(str==null)return '';
+  str=String(str).trim();
+  if(!str)return '';
+
+  if(str.includes('"tag"')&&str.includes('"desc"')){
+    const items=parseTagDescArray(str);
+    if(items&&items.length>0){
+      let html='';
+      items.forEach(it=>{
+        if(it.desc.trim()){
+          if(it.tag)html+=`<div class="tl">【${it.tag}】</div>`;
+          html+=`<div>${it.desc}</div>`;
+        }
+      });
+      if(html)return html;
+    }
+  }
+
+  try{
+    const p=JSON.parse(str);
+    if(typeof p==='string')return deepDecode(p);
+    if(typeof p==='object'&&p){
+      const v=p.html||p.desc||p.content||p.text||p.value||'';
+      if(v)return htmlDecode(String(v));
+    }
+  }catch(e){}
+
+  str=htmlDecode(str);
+  if(!/<[a-z][\s\S]*?>/i.test(str))str=str.replace(/\n/g,'<br>');
+  return str;
+}
+
+// ================================================================
+//  文件加载
+// ================================================================
+async function hf(files){
+  if(!files.length)return;
+  const file=files[0];
+  showS('info',`📄 ${file.name} 解析中...`);
+  imgCache={};
+  const buf=await file.arrayBuffer();
+  try{
+    wb=XLSX.read(buf,{type:'array'});
+    const ns=wb.SheetNames;
+    if(ns.length>1){const s=document.getElementById('sDD');s.innerHTML='';ns.forEach(n=>s.innerHTML+=`<option>${n}</option>`);document.getElementById('sSel').style.display='block';}
+    else document.getElementById('sSel').style.display='none';
+    loadSheet(ns[0]);
+    if(hdrs.length>0&&rows.length>0){
+      let d=`✅ ${rows.length}行 × ${hdrs.length}列\n`;
+      hdrs.forEach(h=>{d+=`\n[${h}]: ${(rows[0][h]||'').substring(0,300)}`;});
+      dbg(d);
+      afterLoad();return;
+    }
+  }catch(e){dbg('SheetJS: '+e.message);}
+  try{
+    wb=null;document.getElementById('sSel').style.display='none';
+    const txt=new TextDecoder('utf-8').decode(buf);
+    const r=Papa.parse(txt,{header:true,dynamicTyping:false,skipEmptyLines:true,delimitersToGuess:[',','\t','|',';'],transformHeader:h=>h.trim()});
+    if(r.data.length>0&&r.meta.fields&&r.meta.fields.length>1){hdrs=r.meta.fields;rows=r.data;afterLoad();return;}
+  }catch(e2){}
+  showS('error','⚠️ 无法解析');
+}
+function afterLoad(){showS('info',`✅ ${rows.length}行 × ${hdrs.length}列`);buildMap();document.getElementById('mp').style.display='block';document.getElementById('cBtn').disabled=false;buildPv();}
+function loadSheet(n){const ws=wb.Sheets[n];const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});if(raw.length<2)throw new Error('空');hdrs=raw[0].map(h=>String(h).trim()).filter(h=>h);rows=[];for(let i=1;i<raw.length;i++){const r={};let has=false;hdrs.forEach((h,j)=>{const v=raw[i][j]!=null?String(raw[i][j]):'';r[h]=v;if(v.trim())has=true;});if(has)rows.push(r);}}
+function switchSheet(){loadSheet(document.getElementById('sDD').value);afterLoad();}
+function buildMap(){
+  const ids=['mId','mStem','mA','mB','mC','mD','mE','mAns','mAna','mType'];
+  const gm={mId:['id','题目id','questionid','question_id','编号','序号','no','number','pk','题号','entity_id'],
+    mStem:['stem','题干','title','question','content','questioncontent','题目','问题','questionhtml'],
+    mA:['optiona','option_a','a','选项a'],mB:['optionb','option_b','b','选项b'],
+    mC:['optionc','option_c','c','选项c'],mD:['optiond','option_d','d','选项d'],mE:['optione','option_e','e','选项e'],
+    mAns:['answer','答案','correctanswer','correct_answer','rightanswer'],
+    mAna:['analysis','解析','explanation','explain','解答','答案解析','analyzehtml','analysiscontent','resolve','solution','analysis_desc'],
+    mType:['type','题型','questiontype','question_type','typename','类型']};
+  const lh=hdrs.map(h=>h.toLowerCase().replace(/[\s_-]/g,''));
+  ids.forEach(id=>{const s=document.getElementById(id);s.innerHTML='<option value="">（不选）</option>';hdrs.forEach(h=>s.innerHTML+=`<option value="${h}">${h}</option>`);s.value='';
+    for(const c of(gm[id]||[])){const idx=lh.indexOf(c.toLowerCase().replace(/[\s_-]/g,''));if(idx>=0){s.value=hdrs[idx];break;}}
+    if(!s.value){for(const c of(gm[id]||[])){const cl=c.toLowerCase().replace(/[\s_-]/g,'');const idx=lh.findIndex(h=>h.includes(cl));if(idx>=0){s.value=hdrs[idx];break;}}}});
+}
+function buildPv(){const t=document.getElementById('pvT');let h='<tr>';hdrs.forEach(c=>h+=`<th>${c}</th>`);h+='</tr>';rows.slice(0,3).forEach(r=>{h+='<tr>';hdrs.forEach(c=>h+=`<td title="${(r[c]||'').substring(0,500)}">${(r[c]||'').substring(0,50)}</td>`);h+='</tr>';});if(rows.length>3)h+=`<tr><td colspan="${hdrs.length}" style="text-align:center;color:#888">共${rows.length}行</td></tr>`;t.innerHTML=h;}
+function gmap(){return{id:document.getElementById('mId').value,stem:document.getElementById('mStem').value,
+  optA:document.getElementById('mA').value,optB:document.getElementById('mB').value,
+  optC:document.getElementById('mC').value,optD:document.getElementById('mD').value,optE:document.getElementById('mE').value,
+  answer:document.getElementById('mAns').value,analysis:document.getElementById('mAna').value,type:document.getElementById('mType').value};}
+
+// ================================================================
+//  渲染HTML
+// ================================================================
+function renderStem(row,i,m){
+  const stem=deepDecode(row[m.stem]||'');
+  const type=m.type?deepDecode(row[m.type]||''):'';
+  let h=`<div class="qb">第${i+1}题${type?' · '+type:''}</div><div style="margin-top:6px">${stem}</div>`;
+  const opts=[{l:'A',k:m.optA},{l:'B',k:m.optB},{l:'C',k:m.optC},{l:'D',k:m.optD},{l:'E',k:m.optE}];
+  if(opts.some(o=>o.k&&row[o.k]&&String(row[o.k]).trim())){
+    h+='<div style="margin-top:8px">';
+    opts.forEach(o=>{if(o.k&&row[o.k]&&String(row[o.k]).trim())h+=`<div class="oi"><strong>${o.l}.</strong> ${deepDecode(row[o.k])}</div>`;});
+    h+='</div>';}
+  return h;
+}
+function renderAns(row,i,m){
+  const ansRaw=row[m.answer]||'';
+  const anaRaw=row[m.analysis]||'';
+  const ansIsJson=ansRaw.includes('"tag"')&&ansRaw.includes('"desc"');
+  const answer=ansIsJson?'':deepDecode(ansRaw||'—');
+  const ansContent=ansIsJson?deepDecode(ansRaw):'';
+  const analysis=deepDecode(anaRaw);
+
+  let h=`<div class="qb">第${i+1}题 · 答案与解析</div>`;
+  if(answer)h+=`<div style="margin-top:6px"><span class="at">答案</span><span class="av">${answer}</span></div>`;
+  if(ansContent)h+=`<div style="margin-top:6px">${ansContent}</div>`;
+  if(analysis)h+=`<div class="as">${analysis}</div>`;
+  return h;
+}
+
+// ================================================================
+//  渲染PNG
+// ================================================================
+async function renderToPNG(htmlRaw,scale){
+  const pad=parseInt(document.getElementById('padP').value)||10;
+  const w=parseInt(document.getElementById('imgW').value)||800;
+  const area=document.getElementById('ra');
+
+  const {html,tainted}=await preloadImgs(htmlRaw);
+
+  const card=document.createElement('div');
+  card.className='rc';card.style.width=w+'px';
+  card.innerHTML=`<div class="inn">${html}</div>`;
+  area.appendChild(card);
+
+  const imgs=card.querySelectorAll('img');
+  if(imgs.length>0){
+    await Promise.all(Array.from(imgs).map(img=>new Promise(r=>{
+      if(img.complete&&img.naturalWidth>0)return r();
+      img.onload=()=>r();
+      img.onerror=()=>{
+        img.alt='[图片]';img.style.width='200px';img.style.height='40px';
+        img.style.border='1px dashed #ccc';r();
+      };
+      setTimeout(r,20000);
+    })));
+    await new Promise(r=>setTimeout(r,300));
+  }
+
+  const canvas=await html2canvas(card,{
+    scale,useCORS:false,allowTaint:true,backgroundColor:'#fff',logging:false
+  });
+
+  const px=Math.round(canvas.width*pad/100),py=Math.round(canvas.height*pad/100);
+  const fc=document.createElement('canvas');fc.width=canvas.width+px*2;fc.height=canvas.height+py*2;
+  const ctx=fc.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,fc.width,fc.height);
+  ctx.drawImage(canvas,px,py);
+  area.removeChild(card);
+
+  return new Promise((resolve,reject)=>{
+    try{
+      fc.toBlob(blob=>{
+        if(blob)resolve(blob);
+        else reject(new Error('toBlob返回null'));
+      },'image/png');
+    }catch(e){
+      if(!tainted){reject(e);return;}
+      console.warn('canvas污染,降级渲染');
+      const card2=document.createElement('div');
+      card2.className='rc';card2.style.width=w+'px';
+      let safeHtml=html.replace(/<img[^>]+src\s*=\s*["']https?:\/\/[^"']+["'][^>]*>/gi,
+        '<div style="padding:8px;border:1px dashed #ccc;color:#999;text-align:center;font-size:12px">[图片需配置代理]</div>');
+      card2.innerHTML=`<div class="inn">${safeHtml}</div>`;
+      area.appendChild(card2);
+      html2canvas(card2,{scale,useCORS:false,allowTaint:false,backgroundColor:'#fff',logging:false}).then(c2=>{
+        const fc2=document.createElement('canvas');fc2.width=c2.width+px*2;fc2.height=c2.height+py*2;
+        const x2=fc2.getContext('2d');x2.fillStyle='#fff';x2.fillRect(0,0,fc2.width,fc2.height);
+        x2.drawImage(c2,px,py);
+        area.removeChild(card2);
+        fc2.toBlob(blob=>{
+          if(blob)resolve(blob);else reject(new Error('降级渲染失败'));
+        },'image/png');
+      }).catch(reject);
+    }
+  });
+}
+
+// ================================================================
+//  上传图片到 GitHub
+// ================================================================
+async function uploadImg(blob,filename){
+  const cfg=getGhCfg();
+  if(!cfg)return null;
+  try{
+    // blob → base64
+    const b64=await new Promise((res,rej)=>{
+      const fr=new FileReader();
+      fr.onloadend=()=>res(fr.result.split(',')[1]); // 去掉 data:image/png;base64, 前缀
+      fr.onerror=rej;
+      fr.readAsDataURL(blob);
+    });
+
+    const path=`images/${filename}`;
+    const apiUrl=`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`;
+
+    // 先检查文件是否存在(需要sha才能覆盖)
+    let sha='';
+    try{
+      const check=await fetch(apiUrl,{headers:{'Authorization':`token ${cfg.token}`,'Accept':'application/vnd.github.v3+json'}});
+      if(check.ok){const d=await check.json();sha=d.sha;}
+    }catch(e){}
+
+    const body={message:`upload ${filename}`,content:b64};
+    if(sha)body.sha=sha; // 覆盖已有文件
+
+    const r=await fetch(apiUrl,{
+      method:'PUT',
+      headers:{'Authorization':`token ${cfg.token}`,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+
+    if(!r.ok){
+      const d=await r.json().catch(()=>({}));
+      console.warn('GitHub上传失败:',r.status,d.message);
+      return null;
+    }
+
+    // 返回 raw 链接
+    return `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/main/${path}`;
+  }catch(e){
+    console.warn('上传异常:',filename,e.message);
+    return null;
+  }
+}
+
+function renderUrlList(){
+  const box=document.getElementById('urlBox');
+  const list=document.getElementById('urlList');
+  if(!uploadedUrls.length){box.style.display='none';return;}
+  box.style.display='block';
+  let h='<table style="width:100%;border-collapse:collapse">';
+  h+='<tr style="color:#6c63ff;font-size:10px;border-bottom:1px solid #444"><th style="text-align:left;padding:4px">ID</th><th style="text-align:left;padding:4px">类型</th><th style="text-align:left;padding:4px">链接</th></tr>';
+  uploadedUrls.forEach(u=>{
+    h+=`<tr style="border-bottom:1px solid #333">
+      <td style="padding:3px 4px;color:#ccc">${u.id}</td>
+      <td style="padding:3px 4px;color:${u.type==='题干'?'#a8a3ff':'#2ecc71'}">${u.type}</td>
+      <td style="padding:3px 4px"><a href="${u.url}" target="_blank" style="color:#6c63ff;word-break:break-all">${u.url}</a></td>
+    </tr>`;
+  });
+  h+='</table>';
+  list.innerHTML=h;
+}
+
+function copyUrls(mode){
+  let text='';
+  if(mode==='json'){
+    const grouped={};
+    uploadedUrls.forEach(u=>{
+      if(!grouped[u.id])grouped[u.id]={id:u.id};
+      if(u.type==='题干')grouped[u.id].stem_url=u.url;
+      else grouped[u.id].answer_url=u.url;
+    });
+    text=JSON.stringify(Object.values(grouped),null,2);
+  }else{
+    const filtered=mode==='all'?uploadedUrls:uploadedUrls.filter(u=>
+      mode==='stem'?u.type==='题干':u.type==='答案'
+    );
+    text=filtered.map(u=>u.url).join('\n');
+  }
+  navigator.clipboard.writeText(text).then(()=>{
+    showS('success',`✅ 已复制 ${mode==='json'?'JSON':'全部'}链接到剪贴板`);
+  });
+}
+
+function exportExcel(){
+  if(!uploadedUrls.length){showS('error','没有可导出的链接');return;}
+  // 按ID分组: {id → {stem_url, answer_url}}
+  const grouped={};
+  uploadedUrls.forEach(u=>{
+    if(!grouped[u.id])grouped[u.id]={};
+    if(u.type==='题干')grouped[u.id].stem_url=u.url;
+    else grouped[u.id].answer_url=u.url;
+  });
+  // 构造表格数据
+  const data=[['ID','题干链接','答案链接']];
+  Object.keys(grouped).forEach(id=>{
+    data.push([id, grouped[id].stem_url||'', grouped[id].answer_url||'']);
+  });
+  // 用 SheetJS 生成 Excel
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  // 设置列宽
+  ws['!cols']=[{wch:22},{wch:80},{wch:80}];
+  const wb2=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb2,ws,'图片链接');
+  XLSX.writeFile(wb2,`图片链接_${Object.keys(grouped).length}题.xlsx`);
+  showS('success',`✅ 已导出 ${Object.keys(grouped).length} 题的链接到 Excel`);
+}
+
+// ================================================================
+//  主流程
+// ================================================================
+async function go(){
+  const m=gmap();
+  if(!m.stem){showS('error','⚠️ 映射题干');return;}
+  if(!m.answer&&!m.analysis){showS('error','⚠️ 映射答案或解析');return;}
+
+  const doUpload=document.getElementById('upCk').checked;
+  if(doUpload&&!getGhCfg()){showS('error','⚠️ 要上传到GitHub图床，请先填写配置并测试');return;}
+
+  const btn=document.getElementById('cBtn');btn.disabled=true;btn.textContent='转换中...';
+  document.getElementById('res').innerHTML='';
+  document.getElementById('urlBox').style.display='none';
+  imgCache={};uploadedUrls=[];
+  const scale=parseInt(document.getElementById('scV').value)||2;
+  const total=rows.length;showS('info',`共${total}题`);sp(0);
+  const zip=new JSZip();const resDiv=document.getElementById('res');let done=0,uploaded=0;
+
+  for(let i=0;i<total;i++){
+    const row=rows[i];
+    if(!row[m.stem]&&!row[m.answer]){sp(((i+1)/total)*100);continue;}
+    let qid=m.id?String(row[m.id]||'').trim():'';if(!qid)qid=String(i+1);
+    const safe=qid.replace(/[\/\\:*?"<>|\s]/g,'_');
+
+    ptx(`[${i+1}/${total}] ${qid} 题干...`);
+    try{
+      const sBlob=await renderToPNG(renderStem(row,i,m),scale);
+      ptx(`[${i+1}/${total}] ${qid} 答案...`);
+      const aBlob=await renderToPNG(renderAns(row,i,m),scale);
+      zip.file(`${safe}_题干.png`,sBlob);zip.file(`${safe}_答案.png`,aBlob);done++;
+
+      // 上传到 R2
+      if(doUpload){
+        ptx(`[${i+1}/${total}] ${qid} 上传中...`);
+        const [sUrl,aUrl]=await Promise.all([
+          uploadImg(sBlob,`${safe}_题干.png`),
+          uploadImg(aBlob,`${safe}_答案.png`)
+        ]);
+        if(sUrl){uploadedUrls.push({id:qid,type:'题干',url:sUrl});uploaded++;}
+        if(aUrl){uploadedUrls.push({id:qid,type:'答案',url:aUrl});uploaded++;}
+      }
+
+      if(i<5){
+        const su=URL.createObjectURL(sBlob),au=URL.createObjectURL(aBlob);
+        const it=document.createElement('div');it.className='ri';
+        it.innerHTML=`<h3>ID:${qid}</h3><div class="rim"><div class="ib"><div class="lb">题干</div><img src="${su}"></div><div class="ib"><div class="lb">答案解析</div><img src="${au}"></div></div>`;
+        resDiv.appendChild(it);
+      }else if(i===5){const n=document.createElement('div');n.className='ri';n.innerHTML=`<p style="text-align:center;color:#888;font-size:11px">后续不再预览</p>`;resDiv.appendChild(n);}
+    }catch(err){
+      const e=document.createElement('div');e.className='ri';
+      e.innerHTML=`<h3>${qid} ❌</h3><p style="color:#ff6b6b;font-size:11px">${err.message}</p>`;
+      resDiv.appendChild(e);
+    }
+    sp(((i+1)/total)*100);
+  }
+  ptx('📦 打包...');
+  const zipBlob=await zip.generateAsync({type:'blob'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(zipBlob);a.download=`题目图片_${done}题.zip`;a.click();
+
+  let msg=`✅ ${done}题→${done*2}张PNG→ZIP(${(zipBlob.size/1024/1024).toFixed(1)}MB)`;
+  if(doUpload)msg+=` | 已上传${uploaded}张图片`;
+  showS('success',msg);
+
+  ptx('');btn.disabled=false;btn.textContent='🚀 开始转换';
+
+  // 渲染链接列表
+  if(uploadedUrls.length)renderUrlList();
+
+  const zu=URL.createObjectURL(zipBlob);
+  const dlBtn=document.createElement('button');dlBtn.className='bp';dlBtn.style.cssText='background:#2ecc71;margin:8px 0';dlBtn.textContent='📦 再次下载ZIP';
+  dlBtn.onclick=()=>{const a2=document.createElement('a');a2.href=zu;a2.download=`题目图片_${done}题.zip`;a2.click();};
+  resDiv.prepend(dlBtn);
+}
+</script>
+</body>
+</html>
