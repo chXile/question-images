@@ -7,7 +7,6 @@ const ALLOWED_HOSTS = [
   'tiku.cdn.bcebos.com',
   'bos.nj.bpc.baidu.com',
   'bce.bdstatic.com',
-  'edu-public.cdn.bcebos.com',
 ];
 
 export async function onRequest(context) {
